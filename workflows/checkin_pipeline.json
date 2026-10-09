@@ -1,0 +1,229 @@
+{
+  "name": "checkin_pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour",
+              "minute": 15
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1yByiFUv-qU35IZPPivKfowfNuVqCDtr17MdrOpd3gD0",
+          "mode": "list",
+          "cachedResultName": "check-in respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yByiFUv-qU35IZPPivKfowfNuVqCDtr17MdrOpd3gD0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 4760010,
+          "mode": "list",
+          "cachedResultName": "Respostas ao formulário 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yByiFUv-qU35IZPPivKfowfNuVqCDtr17MdrOpd3gD0/edit#gid=4760010"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dbd33bf1-085d-40c2-951a-6ad0b1d5cf92",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "z7Ka7clwzBbGH8O4",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"envio_em\": {{ JSON.stringify(DateTime.fromFormat($json['Carimbo de data/hora'] ?? '', 'dd/MM/yyyy HH:mm:ss').toISO()) }},\n  \"data_reserva\": {{ JSON.stringify(DateTime.fromFormat($json['Data em que foi feita a reserva (Booking date)'] ?? '', 'dd/MM/yyyy').toISODate()) }},\n  \"data_checkin\": {{ JSON.stringify(DateTime.fromFormat($json['Data de entrada (check-in)'] ?? '', 'dd/MM/yyyy').toISODate()) }},\n  \"data_checkout\": {{ JSON.stringify(DateTime.fromFormat($json['Data de saída (check-out)'] ?? '', 'dd/MM/yyyy').toISODate()) }},\n  \"hora_chegada\": {{ JSON.stringify($json['Horario de entrada (time of arrival)'] || null) }},\n  \"num_hospedes\": {{ JSON.stringify(parseInt($json['Número de pessoas (Number of guests)'])) }},\n  \"nome\": {{ JSON.stringify(($json['Nome Completo (name)'] ?? '').trim() || null) }},\n  \"data_nascimento\": {{ JSON.stringify(DateTime.fromFormat($json['Data de nascimento (Date of Birth)'] ?? '', 'dd/MM/yyyy').toISODate()) }},\n  \"nacionalidade\": {{ JSON.stringify(($json['Nacionalidade'] ?? '').trim() || null) }},\n  \"sexo\": {{ JSON.stringify(($json['Sexo (sex)'] ?? '').trim() || null) }},\n  \"documento\": {{ JSON.stringify(String($json['CPF (passaport)'] ?? '').trim() || null) }},\n  \"profissao\": {{ JSON.stringify(($json['Profissão (Occupation)'] ?? '').trim() || null) }},\n  \"uf_residencia\": {{ JSON.stringify(($json['Estado de residência (state of residence)'] ?? '').trim() || null) }},\n  \"cidade_residencia\": {{ JSON.stringify(($json['Cidade de residência (city of residence)'] ?? '').trim() || null) }},\n  \"motivo_viagem\": {{ JSON.stringify(($json['Motivo da viagem (Purpose of trip)'] ?? '').split(' (')[0].trim() || null) }},\n  \"meio_transporte\": {{ JSON.stringify(($json['Meio de transporte (Arriving by)'] ?? '').split(' (')[0].trim() || null) }},\n  \"origem_cidade\": {{ JSON.stringify(($json['Último destino - cidade (Arriving from - city)'] ?? '').trim() || null) }},\n  \"primeira_vez_ubatuba\": {{ ($json['Primeira vez em Ubatuba? (First time in Ubatuba?)'] ?? '').startsWith('Sim') }},\n  \"telefone\": {{ JSON.stringify(String($json['Telefone para contato (phone number)'] ?? '').trim() || null) }},\n  \"aceite_registro\": {{ !!Object.entries($json).find(([k]) => k.startsWith('Aceite LGPD'))?.[1] }},\n  \"processado_em\": {{ JSON.stringify($now.toISO()) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d186b9b0-2dad-4120-bf89-3c308f30da60",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const j = $json;\n\n// converte texto ISO em data; se vier vazio ou inválido, retorna null\nconst toDate = (s) => {\n  if (!s) return null;\n  const d = DateTime.fromISO(s);\n  return d.isValid ? d : null;\n};\n\nconst checkin = toDate(j.data_checkin);\nconst checkout = toDate(j.data_checkout);\nconst reserva = toDate(j.data_reserva);\nconst nascimento = toDate(j.data_nascimento);\n\n// idade na data do check-in\nconst idade = (checkin && nascimento)\n  ? Math.floor(checkin.diff(nascimento, 'years').years)\n  : null;\n\nconst faixa_etaria =\n  idade === null ? 'Não informado' :\n  idade < 18 ? 'Menor de 18' :\n  idade < 25 ? '18-24' :\n  idade < 35 ? '25-34' :\n  idade < 45 ? '35-44' :\n  idade < 55 ? '45-54' :\n  idade < 65 ? '55-64' : '65+';\n\n// documento mascarado para exibição (o id anônimo é gerado no nó Crypto)\nconst doc = String(j.documento ?? '');\nconst documento_mascarado = doc.length > 5\n  ? doc.slice(0, 3) + '*****' + doc.slice(-2)\n  : null;\n\nreturn {\n  json: {\n    ...j,\n    idade,\n    faixa_etaria,\n    noites: (checkin && checkout) ? checkout.diff(checkin, 'days').days : null,\n    antecedencia_reserva_dias: (checkin && reserva) ? checkin.diff(reserva, 'days').days : null,\n    dia_semana_checkin: checkin ? checkin.setLocale('pt-BR').toFormat('cccc') : null,\n    mes_checkin: checkin ? checkin.toFormat('yyyy-MM') : null,\n    documento_mascarado,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "54176ab6-3f78-4d33-a606-7f5a355dfb73",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "value": "={{ $json.documento }}",
+        "dataPropertyName": "hospede_id"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "551e4c94-a0a1-4fd8-b4b6-e380370e0601",
+      "name": "Crypto",
+      "credentials": {
+        "crypto": {
+          "id": "Ec06VlpJDRdqfS3t",
+          "name": "Crypto account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "includeOtherFields": true,
+        "include": "except",
+        "excludeFields": "nome, documento, telefone, data_nascimento, documento_mascarado",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        832,
+        0
+      ],
+      "id": "bd92e98e-bf35-4f46-82b9-a4da10da3d1a",
+      "name": "Minimizar dados"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "projectId": {
+          "__rl": true,
+          "value": "n8n-checkin-510713",
+          "mode": "list",
+          "cachedResultName": "n8n-checkin",
+          "cachedResultUrl": "https://console.cloud.google.com/bigquery?project=n8n-checkin-510713"
+        },
+        "datasetId": {
+          "__rl": true,
+          "value": "hospedagem",
+          "mode": "list",
+          "cachedResultName": "hospedagem"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "checkins",
+          "mode": "list",
+          "cachedResultName": "checkins"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleBigQuery",
+      "typeVersion": 2.1,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "cf261ce7-84f3-4b28-9efa-73d8bc8ddc02",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "googleBigQueryOAuth2Api": {
+          "id": "CcVPGRkXgAn5mRJc",
+          "name": "Google BigQuery account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "Minimizar dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Minimizar dados": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "dynamic",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "mkNED8W4D6uuJ3dR",
+    "executionTimeout": 300
+  },
+  "versionId": "6865fce7-7c56-4490-a197-e5bbb7e3fde1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "41af01880b73988cf1783c6c9d331ca83f05a24863ee299da99e7a80cc825705"
+  },
+  "nodeGroups": [],
+  "id": "zB045te7tr5gkKZi",
+  "tags": []
+}

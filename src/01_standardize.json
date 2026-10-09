@@ -1,0 +1,23 @@
+{
+  "envio_em": {{ JSON.stringify(DateTime.fromFormat($json['Carimbo de data/hora'] ?? '', 'dd/MM/yyyy HH:mm:ss').toISO()) }},
+  "data_reserva": {{ JSON.stringify(DateTime.fromFormat($json['Data em que foi feita a reserva (Booking date)'] ?? '', 'dd/MM/yyyy').toISODate()) }},
+  "data_checkin": {{ JSON.stringify(DateTime.fromFormat($json['Data de entrada (check-in)'] ?? '', 'dd/MM/yyyy').toISODate()) }},
+  "data_checkout": {{ JSON.stringify(DateTime.fromFormat($json['Data de saída (check-out)'] ?? '', 'dd/MM/yyyy').toISODate()) }},
+  "hora_chegada": {{ JSON.stringify($json['Horario de entrada (time of arrival)'] || null) }},
+  "num_hospedes": {{ JSON.stringify(parseInt($json['Número de pessoas (Number of guests)'])) }},
+  "nome": {{ JSON.stringify(($json['Nome Completo (name)'] ?? '').trim() || null) }},
+  "data_nascimento": {{ JSON.stringify(DateTime.fromFormat($json['Data de nascimento (Date of Birth)'] ?? '', 'dd/MM/yyyy').toISODate()) }},
+  "nacionalidade": {{ JSON.stringify(($json['Nacionalidade'] ?? '').trim() || null) }},
+  "sexo": {{ JSON.stringify(($json['Sexo (sex)'] ?? '').trim() || null) }},
+  "documento": {{ JSON.stringify(String($json['CPF (passaport)'] ?? '').trim() || null) }},
+  "profissao": {{ JSON.stringify(($json['Profissão (Occupation)'] ?? '').trim() || null) }},
+  "uf_residencia": {{ JSON.stringify(($json['Estado de residência (state of residence)'] ?? '').trim() || null) }},
+  "cidade_residencia": {{ JSON.stringify(($json['Cidade de residência (city of residence)'] ?? '').trim() || null) }},
+  "motivo_viagem": {{ JSON.stringify(($json['Motivo da viagem (Purpose of trip)'] ?? '').split(' (')[0].trim() || null) }},
+  "meio_transporte": {{ JSON.stringify(($json['Meio de transporte (Arriving by)'] ?? '').split(' (')[0].trim() || null) }},
+  "origem_cidade": {{ JSON.stringify(($json['Último destino - cidade (Arriving from - city)'] ?? '').trim() || null) }},
+  "primeira_vez_ubatuba": {{ ($json['Primeira vez em Ubatuba? (First time in Ubatuba?)'] ?? '').startsWith('Sim') }},
+  "telefone": {{ JSON.stringify(String($json['Telefone para contato (phone number)'] ?? '').trim() || null) }},
+  "aceite_registro": {{ !!Object.entries($json).find(([k]) => k.startsWith('Aceite LGPD'))?.[1] }},
+  "processado_em": {{ JSON.stringify($now.toISO()) }}
+}

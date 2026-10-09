@@ -1,0 +1,67 @@
+{
+  "name": "alerta_erros",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8b6710cf-1210-41c7-850e-f95448c2d543",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "diegodzgarcia@gmail.com",
+        "subject": "=Falha no workflow {{ $json.workflow.name }}",
+        "emailType": "text",
+        "message": "= Nó com erro: {{ $json.execution.lastNodeExecuted }}      Mensagem: {{ $json.execution.error.message }}      Execução: {{ $json.execution.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "02207c59-478e-4902-95c9-bd9089735145",
+      "name": "Send a message",
+      "webhookId": "41c5f567-0fe5-48cd-b7dd-acd7264ae0b5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pGLwMsgrMwSJ4GxT",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "90fd0f7e-4b03-42e5-8f53-724600e4f711",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "41af01880b73988cf1783c6c9d331ca83f05a24863ee299da99e7a80cc825705"
+  },
+  "nodeGroups": [],
+  "id": "mkNED8W4D6uuJ3dR",
+  "tags": []
+}
